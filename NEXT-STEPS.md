@@ -221,6 +221,149 @@ Navigate to **Home**. If you've earned any achievements in the last 7 days, a **
 
 ---
 
+### Test 7 — Shame Reminders (feature/shame-reminders)
+
+**What this feature does:** If you haven't logged a workout in 14 or more hours, a full-screen shame modal greets you on the dashboard. The roast text and dismiss button get progressively more brutal the longer you've been absent. If the 14-hour mark will be crossed while you have the tab open, a toast notification fires at that exact moment. Both mechanisms are suppressed once per browser session so you don't get nagged on every page visit.
+
+---
+
+#### Step 7.1 — Set up a test workout to trigger shame
+
+You need at least one workout in IndexedDB with a `createdAt` timestamp that's 15+ hours old.
+
+1. Open the app at `http://localhost:8080`
+2. Log any workout (quick log is fine — type "Test" and save)
+3. Open Chrome DevTools: press **F12**
+4. Click the **Application** tab
+5. In the left sidebar, expand **IndexedDB** → **strength-challenge-db** → click **workouts**
+6. Click on the workout record you just created — it appears in the preview pane on the right
+7. Find the `createdAt` field. It looks like: `"2026-02-23T14:30:00.000Z"`
+8. Double-click the value to edit it
+9. Change the timestamp to something 16 hours in the past. For example, if it's currently 3:00 PM, change it to yesterday at 11:00 PM:
+   - Change the date portion to yesterday
+   - Keep the same ISO format: `"2026-02-22T23:00:00.000Z"`
+10. Press **Enter** to save the edit
+
+> **Why this works:** The shame logic reads `createdAt` from the most recent workout to calculate hours elapsed. Manually editing this value in DevTools lets you simulate any time gap without actually waiting 14 hours.
+
+---
+
+#### Step 7.2 — Trigger the shame modal
+
+1. Reload the page (`F5`)
+2. The shame modal should appear immediately over the dashboard
+
+**What you should see:**
+- A dark overlay with a skull emoji (💀) that shakes after a short delay
+- A large red number showing the hours elapsed (e.g. "16")
+- The word "hours" next to it
+- The caption "since your last workout"
+- A headline matching the hours tier (see tier table below)
+- A roast paragraph
+- A streak warning line in red italics
+- A pulsing red **"Log It Now"** button
+- A grey, understated dismiss button with a snarky label
+
+---
+
+#### Step 7.3 — Test the "Log It Now" button
+
+1. Click the red **Log It Now** button
+2. The overlay should close immediately
+3. The app should navigate to the **Log** screen (`#/log`)
+
+---
+
+#### Step 7.4 — Test the dismiss button
+
+1. Reload the page again (the modal should reappear since you're in a fresh session)
+2. Click the grey dismiss button
+3. The overlay should close, and you stay on the dashboard
+4. Navigate away and back to Home — the modal should **not** reappear
+
+> **Why it doesn't reappear:** Once dismissed or actioned, `sessionStorage` records that shame was shown this session. Navigating between pages does not open a new session — only closing the tab and reopening does.
+
+---
+
+#### Step 7.5 — Verify session suppression
+
+1. With the modal having been shown and dismissed, navigate through the app (History, Log, back to Home)
+2. The modal should **never** reappear during this session
+3. Open a **new tab** and go to `http://localhost:8080` — the modal should appear again (new session, no sessionStorage entry)
+
+---
+
+#### Step 7.6 — Test every shame tier
+
+Edit the `createdAt` timestamp to different values to verify all six tiers. After each edit, **reload the page and open a new Incognito window** (or clear sessionStorage manually in DevTools → Application → Session Storage → Clear All) so the suppression doesn't block the modal.
+
+| Hours to simulate | Headline you should see |
+|---|---|
+| 15 hours | **The Streak Is Getting Nervous** |
+| 20 hours | **Almost a Full Day. Really.** |
+| 28 hours | **A Whole Day Gone** |
+| 40 hours | **Day and a Half. Outstanding.** |
+| 52 hours | **Two Days. The Gains Are Gone.** |
+| 80 hours | **You Have Forgotten What Lifting Is** |
+
+For each tier, check that:
+- The hours number in red matches what you expect
+- The headline and roast text are unique (not repeating from another tier)
+- The dismiss button label changes per tier (escalating from mild to defeated)
+
+---
+
+#### Step 7.7 — Verify no shame when recently logged
+
+1. Log a fresh workout right now (the `createdAt` will be the current time)
+2. Reload the page
+3. The shame modal should **not** appear — you logged within the last 14 hours
+
+This confirms the threshold check works correctly and won't annoy you when you're being disciplined.
+
+---
+
+#### Step 7.8 — Test the in-page toast nudge
+
+This test simulates being in the app when the 14-hour mark is about to pass.
+
+1. Log a fresh workout (createdAt = now)
+2. Open DevTools → **Application** → **IndexedDB** → **workouts**
+3. Edit `createdAt` to be 13 hours and 58 minutes ago (e.g., if it's 3:00 PM, set it to yesterday 1:02 AM)
+4. Reload the page — the shame modal should **not** appear (only 13h 58m elapsed, under threshold)
+5. Leave the tab open and wait ~2 minutes
+6. A red toast notification should appear at the bottom of the screen reading: *"14 hours. No workout. The streak is waiting on you."*
+
+> **What this proves:** If you leave the app open and hit the 14-hour mark mid-session, the in-page nudge fires without requiring a reload. It uses `setTimeout` calculated at page load time.
+
+---
+
+#### Step 7.9 — Confirm milestone celebrations still work
+
+The shame modal and milestone celebrations both use the `#celebration-overlay` element. They must not conflict.
+
+1. Set your workout count close to a milestone (e.g. you need 7 total for the first milestone)
+2. Edit your most recent workout's `createdAt` to be 16 hours ago so shame will trigger
+3. Reload the page — the shame modal should appear first
+4. Dismiss it
+5. If you were at a milestone, the gold celebration overlay should appear after
+6. Dismiss that too
+
+Both overlays should appear in sequence without visual glitches or broken dismiss buttons.
+
+---
+
+#### Step 7.10 — Verify no shame before the challenge starts
+
+1. Open DevTools → **Application** → **IndexedDB** → **workouts** → clear the object store
+2. Open the **challenge** store → set `isActive` to `false` and `startDate` to `null`
+3. Reload the page
+4. The welcome screen should appear with no shame modal
+
+> **Why this matters:** The shame feature should never trigger for a brand-new user who hasn't started yet. `getShameStatus()` returns `null` when there are no workouts.
+
+---
+
 ### Test 6 — PWA Offline (all versions)
 
 Any time you update the service worker cache (which changed with each branch), you need to verify offline still works.
