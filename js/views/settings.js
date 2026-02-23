@@ -1,10 +1,18 @@
 import { exportAllData, importAllData, resetAllData, getChallenge, getWorkoutCount } from '../db.js';
 import { showToast } from '../components/toast.js';
 import { displayDate } from '../utils/dates.js';
+import { getAutoBackupTimestamp } from '../utils/backup.js';
 
 export async function renderSettings(container) {
   const challenge = await getChallenge();
   const count = await getWorkoutCount();
+  const backupTs = getAutoBackupTimestamp();
+
+  let backupInfo = 'No auto-backup yet';
+  if (backupTs) {
+    const d = new Date(backupTs);
+    backupInfo = `${d.toLocaleDateString()} at ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
 
   container.innerHTML = `
     <button class="back-btn" id="back-btn">← Back</button>
@@ -16,6 +24,16 @@ export async function renderSettings(container) {
         ${challenge.isActive && challenge.startDate
           ? `Started: ${displayDate(challenge.startDate)}<br>Workouts logged: ${count}`
           : 'No active challenge'}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">Auto-Backup</div>
+      <div style="font-size:0.875rem;color:var(--text-secondary);">
+        Last backup: <strong>${backupInfo}</strong>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">
+        Auto-saved to localStorage after every workout. Survives clearing browser cache, but not "Clear site data".
       </div>
     </div>
 
@@ -38,12 +56,10 @@ export async function renderSettings(container) {
     </div>
   `;
 
-  // Back
   container.querySelector('#back-btn').addEventListener('click', () => {
     window.location.hash = '#/home';
   });
 
-  // Export
   container.querySelector('#export-btn').addEventListener('click', async () => {
     const data = await exportAllData();
     const json = JSON.stringify(data, null, 2);
@@ -57,7 +73,6 @@ export async function renderSettings(container) {
     showToast('Data exported!', 'success');
   });
 
-  // Import
   const importBtn = container.querySelector('#import-btn');
   const importFile = container.querySelector('#import-file');
   importBtn.addEventListener('click', () => importFile.click());
@@ -75,7 +90,6 @@ export async function renderSettings(container) {
         return;
       }
 
-      // Confirm
       showConfirmDialog(
         'Import Data',
         'This will replace ALL current data. Are you sure?',
@@ -90,7 +104,6 @@ export async function renderSettings(container) {
     }
   });
 
-  // Reset
   container.querySelector('#reset-btn').addEventListener('click', () => {
     showConfirmDialog(
       'Reset All Data',

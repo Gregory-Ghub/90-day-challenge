@@ -1,5 +1,6 @@
 import { getWorkoutByDay } from '../db.js';
 import { displayDate } from '../utils/dates.js';
+import { escapeHtml, formatDuration } from '../utils/html.js';
 
 export async function renderDayDetail(container, dayNum) {
   const workout = await getWorkoutByDay(dayNum);
@@ -26,9 +27,12 @@ export async function renderDayDetail(container, dayNum) {
         ${workout.exercises.map(ex => `
           <div class="exercise-item">
             <div class="exercise-name">${escapeHtml(ex.name)}</div>
-            ${ex.sets.map((s, i) => `
-              <div class="set-row">Set ${i + 1}: ${s.reps || '—'} reps ${s.weight ? `@ ${s.weight} lbs` : ''}</div>
-            `).join('')}
+            ${ex.sets.map((s, i) => {
+              const display = s.duration != null
+                ? formatDuration(s.duration)
+                : `${s.reps || '—'} reps${s.weight ? ` @ ${s.weight} lbs` : ''}`;
+              return `<div class="set-row">Set ${i + 1}: ${display}</div>`;
+            }).join('')}
           </div>
         `).join('')}
       </div>
@@ -78,10 +82,4 @@ export async function renderDayDetail(container, dayNum) {
   container.querySelector('#edit-btn').addEventListener('click', () => {
     window.location.hash = `#/log/${workout.dayNumber}`;
   });
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }

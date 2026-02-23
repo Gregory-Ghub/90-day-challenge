@@ -16,42 +16,82 @@ export async function checkAndShowMilestone(workoutCount) {
 
   for (const ms of MILESTONES) {
     if (workoutCount >= ms.day && !shown.includes(ms.day)) {
-      // Mark as shown
       shown.push(ms.day);
       await updateChallenge({ milestonesShown: shown });
-      showCelebration(ms);
-      return; // Show one at a time
+      await showCelebration(ms);
+      return;
     }
   }
 }
 
+/**
+ * Gold milestone celebration. Returns a Promise that resolves when dismissed.
+ */
 function showCelebration(milestone) {
-  const overlay = document.getElementById('celebration-overlay');
-  overlay.classList.remove('hidden');
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('celebration-overlay');
+    overlay.classList.remove('hidden');
 
-  // Confetti particles
-  let confettiHtml = '';
-  const colors = ['#c8860a', '#e6a817', '#f0c040', '#d4a020', '#b87a08', '#ffd700'];
-  for (let i = 0; i < 30; i++) {
-    const color = colors[i % colors.length];
-    const left = Math.random() * 100;
-    const delay = Math.random() * 1;
-    const duration = 2 + Math.random() * 2;
-    confettiHtml += `<div class="confetti" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${duration}s;"></div>`;
-  }
+    const colors = ['#c8860a', '#e6a817', '#f0c040', '#d4a020', '#b87a08', '#ffd700'];
+    let confettiHtml = '';
+    for (let i = 0; i < 30; i++) {
+      const color = colors[i % colors.length];
+      const left = Math.random() * 100;
+      const delay = Math.random() * 1;
+      const duration = 2 + Math.random() * 2;
+      confettiHtml += `<div class="confetti" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${duration}s;"></div>`;
+    }
 
-  overlay.innerHTML = `
-    ${confettiHtml}
-    <div class="celebration-content">
-      <span class="celebration-emoji">${milestone.emoji}</span>
-      <h2 class="celebration-title">${milestone.title}</h2>
-      <p class="celebration-subtitle">You've completed ${milestone.day} days!<br>Keep pushing forward.</p>
-      <button class="celebration-dismiss" id="dismiss-celebration">Keep Going</button>
-    </div>
-  `;
+    overlay.innerHTML = `
+      ${confettiHtml}
+      <div class="celebration-content">
+        <span class="celebration-emoji">${milestone.emoji}</span>
+        <h2 class="celebration-title">${milestone.title}</h2>
+        <p class="celebration-subtitle">You've completed ${milestone.day} days!<br>Keep pushing forward.</p>
+        <button class="celebration-dismiss" id="dismiss-celebration">Keep Going</button>
+      </div>
+    `;
 
-  overlay.querySelector('#dismiss-celebration').addEventListener('click', () => {
-    overlay.classList.add('hidden');
-    overlay.innerHTML = '';
+    overlay.querySelector('#dismiss-celebration').addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      overlay.innerHTML = '';
+      resolve();
+    });
+  });
+}
+
+/**
+ * Blue achievement celebration. Returns a Promise that resolves when dismissed.
+ */
+export function showAchievementCelebration(achievement) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('celebration-overlay');
+    overlay.classList.remove('hidden');
+
+    const colors = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#2563eb', '#bfdbfe'];
+    let confettiHtml = '';
+    for (let i = 0; i < 20; i++) {
+      const color = colors[i % colors.length];
+      const left = Math.random() * 100;
+      const delay = Math.random() * 0.8;
+      const duration = 1.5 + Math.random() * 2;
+      confettiHtml += `<div class="confetti" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${duration}s;"></div>`;
+    }
+
+    overlay.innerHTML = `
+      ${confettiHtml}
+      <div class="celebration-content">
+        <span class="celebration-emoji">${achievement.emoji}</span>
+        <h2 class="celebration-title" style="color:#60a5fa">${achievement.title}</h2>
+        <p class="celebration-subtitle">${achievement.description}</p>
+        <button class="celebration-dismiss" style="background:#3b82f6" id="dismiss-celebration">Awesome!</button>
+      </div>
+    `;
+
+    overlay.querySelector('#dismiss-celebration').addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      overlay.innerHTML = '';
+      resolve();
+    });
   });
 }

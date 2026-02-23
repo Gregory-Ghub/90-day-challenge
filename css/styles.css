@@ -591,6 +591,28 @@ body {
   min-width: 24px;
 }
 
+.dur-input {
+  width: 52px;
+  padding: 8px 4px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.dur-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.dur-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 1px;
+}
+
 .remove-btn {
   background: none;
   border: none;
@@ -599,6 +621,14 @@ body {
   padding: 4px;
   font-size: 1.25rem;
   line-height: 1;
+}
+
+.exercise-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 4px 0 6px;
+  padding-left: 2px;
 }
 
 .add-link {
@@ -723,6 +753,12 @@ body {
 /* ========== Hidden utility ========== */
 .hidden {
   display: none !important;
+}
+
+/* ========== Canvas Charts ========== */
+canvas {
+  display: block;
+  max-width: 100%;
 }
 
 /* ========== Back Button ========== */

@@ -1,0 +1,28 @@
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment / secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Python dev server junk
+__pycache__/
+*.py[cod]
+
+# npm / node (if ever added)
+node_modules/
+npm-debug.log*
+
+# Build output (if ever added)
+dist/
+build/

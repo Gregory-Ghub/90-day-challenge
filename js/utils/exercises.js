@@ -36,18 +36,18 @@ export const DEFAULT_EXERCISES = [
   { name: 'Hip Thrusts', category: 'legs', isCustom: false },
 
   // Core
-  { name: 'Planks', category: 'core', isCustom: false },
+  { name: 'Planks', category: 'core', isCustom: false, isDuration: true },
   { name: 'Crunches', category: 'core', isCustom: false },
   { name: 'Hanging Leg Raises', category: 'core', isCustom: false },
   { name: 'Russian Twists', category: 'core', isCustom: false },
   { name: 'Ab Wheel Rollouts', category: 'core', isCustom: false },
 
   // Cardio
-  { name: 'Running', category: 'cardio', isCustom: false },
-  { name: 'Rowing Machine', category: 'cardio', isCustom: false },
-  { name: 'Jump Rope', category: 'cardio', isCustom: false },
-  { name: 'Cycling', category: 'cardio', isCustom: false },
-  { name: 'Battle Ropes', category: 'cardio', isCustom: false },
+  { name: 'Running', category: 'cardio', isCustom: false, isDuration: true },
+  { name: 'Rowing Machine', category: 'cardio', isCustom: false, isDuration: true },
+  { name: 'Jump Rope', category: 'cardio', isCustom: false, isDuration: true },
+  { name: 'Cycling', category: 'cardio', isCustom: false, isDuration: true },
+  { name: 'Battle Ropes', category: 'cardio', isCustom: false, isDuration: true },
 ];
 
 export const CATEGORIES = ['push', 'pull', 'legs', 'core', 'cardio', 'other'];

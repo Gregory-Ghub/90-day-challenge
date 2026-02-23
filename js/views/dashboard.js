@@ -1,11 +1,13 @@
 import { getChallenge, getWorkoutCount, getRandomMessage, getWorkoutByDate } from '../db.js';
 import { renderProgressBar } from '../components/progress-bar.js';
-import { todayStr, currentDay, displayDate } from '../utils/dates.js';
+import { todayStr, currentDay } from '../utils/dates.js';
 import { checkAndShowMilestone } from '../components/milestone-badge.js';
 import { LION_SVG, LION_SVG_SMALL } from '../components/lion-svg.js';
+import { escapeHtml } from '../utils/html.js';
+import { ACHIEVEMENTS } from '../utils/achievements.js';
 
 const MILESTONES = [
-  { day: 7, emoji: '⭐', label: 'First Week' },
+  { day: 7,  emoji: '⭐', label: 'First Week' },
   { day: 14, emoji: '🔥', label: 'Two Weeks' },
   { day: 30, emoji: '🏆', label: 'One Month' },
   { day: 45, emoji: '⛰️', label: 'Halfway' },
@@ -39,14 +41,10 @@ export async function renderDashboard(container) {
   const day = currentDay(challenge.startDate);
   const todayWorkout = await getWorkoutByDate(today);
   const loggedToday = !!todayWorkout;
-
-  // Clamp display day to 1–90
   const displayDay = Math.min(Math.max(day, 1), 90);
-
-  // Check if challenge is complete
   const isComplete = count >= 90 || day > 90;
 
-  // Random past message (only show after 7+ entries)
+  // Random past message (after 7+ entries)
   let messageHtml = '';
   if (count >= 7) {
     const msg = await getRandomMessage();
@@ -61,7 +59,7 @@ export async function renderDashboard(container) {
     }
   }
 
-  // Milestone badges row (earned ones only, last 3)
+  // Earned milestone badges (last 3)
   const earnedMilestones = MILESTONES.filter(m => count >= m.day);
   let milestoneBadgesHtml = '';
   if (earnedMilestones.length > 0) {
@@ -78,6 +76,31 @@ export async function renderDashboard(container) {
           `).join('')}
         </div>
         <div style="text-align:center;margin-top:8px;font-size:0.75rem;color:var(--accent);">View all</div>
+      </div>
+    `;
+  }
+
+  // Recently earned achievements (last 7 days)
+  const earned = challenge.achievements || [];
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recentAchievements = earned.filter(a => new Date(a.earnedAt).getTime() >= cutoff);
+  let achievementsHtml = '';
+  if (recentAchievements.length > 0) {
+    achievementsHtml = `
+      <div class="card" style="cursor:pointer" id="achievements-link">
+        <div class="card-title">Recent Achievements</div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          ${recentAchievements.map(a => {
+            const def = ACHIEVEMENTS.find(d => d.id === a.id);
+            return def ? `
+              <div style="text-align:center">
+                <div style="font-size:1.5rem">${def.emoji}</div>
+                <div style="font-size:0.6875rem;color:var(--text-muted)">${def.label}</div>
+              </div>
+            ` : '';
+          }).join('')}
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:0.75rem;color:#3b82f6;">View all</div>
       </div>
     `;
   }
@@ -110,30 +133,21 @@ export async function renderDashboard(container) {
     ${renderProgressBar(count)}
     ${bannerHtml}
     ${messageHtml}
+    ${achievementsHtml}
     ${milestoneBadgesHtml}
   `;
 
-  // Event listeners
-  const logBanner = container.querySelector('#log-today-banner');
-  if (logBanner) {
-    logBanner.addEventListener('click', () => {
-      window.location.hash = '#/log';
-    });
-  }
+  container.querySelector('#log-today-banner')?.addEventListener('click', () => {
+    window.location.hash = '#/log';
+  });
 
-  const msLink = container.querySelector('#milestones-link');
-  if (msLink) {
-    msLink.addEventListener('click', () => {
-      window.location.hash = '#/milestones';
-    });
-  }
+  container.querySelector('#milestones-link')?.addEventListener('click', () => {
+    window.location.hash = '#/milestones';
+  });
 
-  // Check for new milestone celebration
+  container.querySelector('#achievements-link')?.addEventListener('click', () => {
+    window.location.hash = '#/milestones';
+  });
+
   await checkAndShowMilestone(count);
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }

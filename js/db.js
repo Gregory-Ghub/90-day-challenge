@@ -1,7 +1,8 @@
 import { DEFAULT_EXERCISES } from './utils/exercises.js';
+import { saveAutoBackup } from './utils/backup.js';
 
 const DB_NAME = 'strength-challenge-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let db = null;
 
@@ -11,24 +12,24 @@ export function initDB() {
 
     request.onupgradeneeded = (e) => {
       const database = e.target.result;
+      const { oldVersion } = e;
 
-      // Workouts store
-      if (!database.objectStoreNames.contains('workouts')) {
+      // Version 1 stores
+      if (oldVersion < 1) {
         const workouts = database.createObjectStore('workouts', { keyPath: 'id', autoIncrement: true });
         workouts.createIndex('dayNumber', 'dayNumber', { unique: false });
         workouts.createIndex('date', 'date', { unique: true });
-      }
 
-      // Challenge state store
-      if (!database.objectStoreNames.contains('challenge')) {
         database.createObjectStore('challenge', { keyPath: 'id' });
-      }
 
-      // Exercises library store
-      if (!database.objectStoreNames.contains('exercises_library')) {
         const lib = database.createObjectStore('exercises_library', { keyPath: 'id', autoIncrement: true });
         lib.createIndex('name', 'name', { unique: true });
         lib.createIndex('category', 'category', { unique: false });
+      }
+
+      // Version 2: workout templates
+      if (oldVersion < 2) {
+        database.createObjectStore('workout_templates', { keyPath: 'id', autoIncrement: true });
       }
     };
 
@@ -43,7 +44,6 @@ export function initDB() {
 }
 
 async function seedDefaults() {
-  // Seed challenge state if not exists
   const challenge = await getChallenge();
   if (!challenge) {
     await put('challenge', {
@@ -51,11 +51,11 @@ async function seedDefaults() {
       startDate: null,
       isActive: false,
       completedAt: null,
-      milestonesShown: []
+      milestonesShown: [],
+      achievements: []
     });
   }
 
-  // Seed exercises if empty
   const exercises = await getAll('exercises_library');
   if (exercises.length === 0) {
     for (const ex of DEFAULT_EXERCISES) {
@@ -141,7 +141,8 @@ export async function updateChallenge(data) {
 }
 
 export async function startChallenge(startDate) {
-  return updateChallenge({ startDate, isActive: true, completedAt: null, milestonesShown: [] });
+  await updateChallenge({ startDate, isActive: true, completedAt: null, milestonesShown: [] });
+  await saveAutoBackup(exportAllData);
 }
 
 // ---- Workouts ----
@@ -150,20 +151,24 @@ export async function saveWorkout(workout) {
   const existing = await getWorkoutByDate(workout.date);
   const now = new Date().toISOString();
 
+  let result;
   if (existing) {
-    return put('workouts', {
+    result = await put('workouts', {
       ...existing,
       ...workout,
       id: existing.id,
       updatedAt: now
     });
   } else {
-    return add('workouts', {
+    result = await add('workouts', {
       ...workout,
       createdAt: now,
       updatedAt: now
     });
   }
+
+  await saveAutoBackup(exportAllData);
+  return result;
 }
 
 export async function getWorkoutByDate(date) {
@@ -197,8 +202,29 @@ export async function getExercises() {
   return getAll('exercises_library');
 }
 
-export async function addCustomExercise(name, category) {
-  return add('exercises_library', { name, category, isCustom: true });
+export async function addCustomExercise(name, category, notes = '', defaultReps = null, defaultSets = null, isDuration = false) {
+  return add('exercises_library', { name, category, isCustom: true, notes: notes || '', defaultReps, defaultSets, isDuration });
+}
+
+// ---- Workout Templates ----
+
+export async function getTemplates() {
+  return getAll('workout_templates');
+}
+
+export async function addTemplate(template) {
+  return add('workout_templates', {
+    ...template,
+    createdAt: new Date().toISOString()
+  });
+}
+
+export async function updateTemplate(template) {
+  return put('workout_templates', template);
+}
+
+export async function deleteTemplate(id) {
+  return deleteRecord('workout_templates', id);
 }
 
 // ---- Import / Export ----
@@ -207,38 +233,35 @@ export async function exportAllData() {
   const workouts = await getAll('workouts');
   const challenge = await getChallenge();
   const exercises = await getAll('exercises_library');
-  return { workouts, challenge, exercises, exportedAt: new Date().toISOString() };
+  const templates = await getAll('workout_templates');
+  return { workouts, challenge, exercises, templates, exportedAt: new Date().toISOString() };
 }
 
 export async function importAllData(data) {
-  // Clear existing
   await clearStore('workouts');
   await clearStore('challenge');
   await clearStore('exercises_library');
+  await clearStore('workout_templates');
 
-  // Import challenge
-  if (data.challenge) {
-    await put('challenge', data.challenge);
-  }
-
-  // Import workouts
+  if (data.challenge) await put('challenge', data.challenge);
   if (data.workouts) {
-    for (const w of data.workouts) {
-      await add('workouts', w);
-    }
+    for (const w of data.workouts) await add('workouts', w);
+  }
+  if (data.exercises) {
+    for (const ex of data.exercises) await add('exercises_library', ex);
+  }
+  if (data.templates) {
+    for (const t of data.templates) await add('workout_templates', t);
   }
 
-  // Import exercises
-  if (data.exercises) {
-    for (const ex of data.exercises) {
-      await add('exercises_library', ex);
-    }
-  }
+  await saveAutoBackup(exportAllData);
 }
 
 export async function resetAllData() {
   await clearStore('workouts');
   await clearStore('challenge');
   await clearStore('exercises_library');
+  await clearStore('workout_templates');
   await seedDefaults();
+  await saveAutoBackup(exportAllData);
 }
