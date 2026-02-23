@@ -28,6 +28,26 @@ A Progressive Web App (PWA) for tracking a 90-day strength workout challenge. Fe
 2. Click the **install icon** (looks like a monitor with a down arrow) in the address bar
 3. Click **Install**
 
+### Updating an Already-Installed App
+
+When a new version is released, the app updates itself in the background — you don't reinstall it. Here's how to get the latest version:
+
+**Easiest method:**
+1. Close the app completely (swipe it away from recent apps on Android)
+2. Reopen it — Chrome checks for a new version on every launch and will activate it automatically
+
+**If the app still shows the old version:**
+1. Open Chrome (the browser, not the installed app)
+2. Go to your app's URL
+3. Tap the three-dot menu → **Settings** → **Site settings** → find your app's URL → tap **Clear & reset**
+4. Reopen the installed app
+
+**Last resort (always works):**
+1. Uninstall the app (long-press the icon → Uninstall)
+2. Open Chrome, go to the GitHub Pages URL, and reinstall
+
+> **How to confirm you have the latest version:** Go to **Log → Structured** and select **Running** — if you see `[ ] m [ ] s` duration inputs, you're on v1.5.0 or later.
+
 ---
 
 ## What It Is
