@@ -8,7 +8,7 @@ A Progressive Web App (PWA) for tracking a 90-day strength workout challenge. Fe
 
 ### On Android (Chrome)
 
-1. Open **https://YOUR_USERNAME.github.io/90-day-challenge/** in Chrome
+1. Open **https://gregory-ghub.github.io/90-day-challenge** in Chrome
 2. Tap the **three-dot menu (⋮)** in the top-right corner
 3. Tap **"Install app"** or **"Add to Home Screen"**
 4. The app icon appears on your home screen and works offline from now on
@@ -17,14 +17,14 @@ A Progressive Web App (PWA) for tracking a 90-day strength workout challenge. Fe
 
 ### On iPhone / iPad (Safari)
 
-1. Open **https://YOUR_USERNAME.github.io/90-day-challenge/** in Safari
+1. Open **https://gregory-ghub.github.io/90-day-challenge** in Safari
 2. Tap the **Share button** (the box with an arrow pointing up)
 3. Scroll down and tap **"Add to Home Screen"**
 4. Tap **Add** in the top-right corner
 
 ### On Desktop (Chrome or Edge)
 
-1. Open **https://YOUR_USERNAME.github.io/90-day-challenge/** in Chrome or Edge
+1. Open **https://gregory-ghub.github.io/90-day-challenge** in Chrome or Edge
 2. Click the **install icon** (looks like a monitor with a down arrow) in the address bar
 3. Click **Install**
 
@@ -234,7 +234,7 @@ Replace `YOUR_USERNAME` with your actual GitHub username.
 Your app is now live at:
 
 ```
-https://YOUR_USERNAME.github.io/90-day-challenge/
+https://gregory-ghub.github.io/90-day-challenge
 ```
 
 ### 7. Install on your phone
