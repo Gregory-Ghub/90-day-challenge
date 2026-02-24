@@ -221,6 +221,190 @@ Navigate to **Home**. If you've earned any achievements in the last 7 days, a **
 
 ---
 
+### Test 7 — Shame Reminders (feature/shame-reminders)
+
+**What this feature does:** If you haven't logged a workout in 14 or more hours, a full-screen shame modal greets you on the dashboard. The roast text and dismiss button get progressively more brutal the longer you've been absent. If the 14-hour mark will be crossed while you have the tab open, a toast notification fires at that exact moment. Both mechanisms are suppressed once per browser session so you don't get nagged on every page visit.
+
+---
+
+#### Step 7.1 — Set up a test workout to trigger shame
+
+You need at least one workout in IndexedDB with a `createdAt` timestamp that's 15+ hours old.
+
+1. Open the app at `http://localhost:8080`
+2. Log any workout (quick log is fine — type "Test" and save)
+3. Open Chrome DevTools: press **F12**
+4. Click the **Console** tab
+5. Paste the following snippet and press **Enter**:
+
+```javascript
+(() => {
+  const req = indexedDB.open('strength-challenge-db', 2);
+  req.onsuccess = (e) => {
+    const db = e.target.result;
+    const tx = db.transaction('workouts', 'readwrite');
+    const store = tx.objectStore('workouts');
+    store.getAll().onsuccess = (ev) => {
+      const all = ev.target.result;
+      if (!all.length) { console.log('No workouts found.'); return; }
+      const latest = all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      const hoursAgo = new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString();
+      latest.createdAt = hoursAgo;
+      store.put(latest).onsuccess = () => {
+        console.log(`✅ Done. createdAt set to: ${hoursAgo}`);
+      };
+    };
+  };
+})();
+```
+
+6. You should see `✅ Done. createdAt set to: ...` in the console
+
+> **Why the console instead of the Application tab:** Chrome DevTools shows IndexedDB values as editable but the edits silently revert — it's a known browser limitation. The console snippet writes directly to the database using the same IndexedDB API the app uses, so the change sticks.
+
+> **To test different tiers**, change the `16` in `- 16 * 60 * 60 * 1000` to any number of hours before running the snippet.
+
+---
+
+#### Step 7.2 — Trigger the shame modal
+
+1. Reload the page (`F5`)
+2. The shame modal should appear immediately over the dashboard
+
+**What you should see:**
+- A dark overlay with a skull emoji (💀) that shakes after a short delay
+- A large red number showing the hours elapsed (e.g. "16")
+- The word "hours" next to it
+- The caption "since your last workout"
+- A headline matching the hours tier (see tier table below)
+- A roast paragraph
+- A streak warning line in red italics
+- A pulsing red **"Log It Now"** button
+- A grey, understated dismiss button with a snarky label
+
+---
+
+#### Step 7.3 — Test the "Log It Now" button
+
+1. Click the red **Log It Now** button
+2. The overlay should close immediately
+3. The app should navigate to the **Log** screen (`#/log`)
+
+---
+
+#### Step 7.4 — Test the dismiss button
+
+1. Reload the page again (the modal should reappear since you're in a fresh session)
+2. Click the grey dismiss button
+3. The overlay should close, and you stay on the dashboard
+4. Navigate away and back to Home — the modal should **not** reappear
+
+> **Why it doesn't reappear:** Once dismissed or actioned, `sessionStorage` records that shame was shown this session. Navigating between pages does not open a new session — only closing the tab and reopening does.
+
+---
+
+#### Step 7.5 — Verify session suppression
+
+1. With the modal having been shown and dismissed, navigate through the app (History, Log, back to Home)
+2. The modal should **never** reappear during this session
+3. Open a **new tab** and go to `http://localhost:8080` — the modal should appear again (new session, no sessionStorage entry)
+
+---
+
+#### Step 7.6 — Test every shame tier
+
+Run the console snippet from Step 7.1 with different hour values to verify all six tiers. After each run, clear sessionStorage so the suppression doesn't block the modal — paste this into the console first:
+
+```javascript
+sessionStorage.clear(); console.log('Session cleared — reload to see shame modal again.');
+```
+
+Then re-run the timestamp snippet with the hour value for the tier you want to test, and reload.
+
+| Hours to use in snippet | Headline you should see |
+|---|---|
+| `15` | **The Streak Is Getting Nervous** |
+| `20` | **Almost a Full Day. Really.** |
+| `28` | **A Whole Day Gone** |
+| `40` | **Day and a Half. Outstanding.** |
+| `52` | **Two Days. The Gains Are Gone.** |
+| `80` | **You Have Forgotten What Lifting Is** |
+
+For each tier, check that:
+- The hours number in red matches what you expect
+- The headline and roast text are unique (not repeating from another tier)
+- The dismiss button label changes per tier (escalating from mild to defeated)
+
+---
+
+#### Step 7.7 — Verify no shame when recently logged
+
+1. Log a fresh workout right now (the `createdAt` will be the current time)
+2. Reload the page
+3. The shame modal should **not** appear — you logged within the last 14 hours
+
+This confirms the threshold check works correctly and won't annoy you when you're being disciplined.
+
+---
+
+#### Step 7.8 — Test the in-page toast nudge
+
+This test simulates being in the app when the 14-hour mark is about to pass.
+
+1. Log a fresh workout (createdAt = now)
+2. Open DevTools → **Console** tab and paste this to set the timestamp to 13 hours 58 minutes ago:
+
+```javascript
+(() => {
+  const req = indexedDB.open('strength-challenge-db', 2);
+  req.onsuccess = (e) => {
+    const db = e.target.result;
+    const tx = db.transaction('workouts', 'readwrite');
+    const store = tx.objectStore('workouts');
+    store.getAll().onsuccess = (ev) => {
+      const all = ev.target.result;
+      const latest = all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      latest.createdAt = new Date(Date.now() - ((13 * 60 + 58) * 60 * 1000)).toISOString();
+      store.put(latest).onsuccess = () => console.log('✅ Set to 13h 58m ago');
+    };
+  };
+})();
+```
+
+3. Reload the page — the shame modal should **not** appear (only 13h 58m elapsed, under threshold)
+4. Leave the tab open and wait ~2 minutes
+5. A red toast notification should appear at the bottom of the screen reading: *"14 hours. No workout. The streak is waiting on you."*
+
+> **What this proves:** If you leave the app open and hit the 14-hour mark mid-session, the in-page nudge fires without requiring a reload. It uses `setTimeout` calculated at page load time.
+
+---
+
+#### Step 7.9 — Confirm milestone celebrations still work
+
+The shame modal and milestone celebrations both use the `#celebration-overlay` element. They must not conflict.
+
+1. Set your workout count close to a milestone (e.g. you need 7 total for the first milestone)
+2. Run the console snippet from Step 7.1 (with `16` hours) so shame will trigger
+3. Reload the page — the shame modal should appear first
+4. Dismiss it
+5. If you were at a milestone, the gold celebration overlay should appear after
+6. Dismiss that too
+
+Both overlays should appear in sequence without visual glitches or broken dismiss buttons.
+
+---
+
+#### Step 7.10 — Verify no shame before the challenge starts
+
+1. Open DevTools → **Application** → **IndexedDB** → **workouts** → clear the object store
+2. Open the **challenge** store → set `isActive` to `false` and `startDate` to `null`
+3. Reload the page
+4. The welcome screen should appear with no shame modal
+
+> **Why this matters:** The shame feature should never trigger for a brand-new user who hasn't started yet. `getShameStatus()` returns `null` when there are no workouts.
+
+---
+
 ### Test 6 — PWA Offline (all versions)
 
 Any time you update the service worker cache (which changed with each branch), you need to verify offline still works.

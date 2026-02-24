@@ -1,4 +1,4 @@
-const CACHE_NAME = '90day-v7';
+const CACHE_NAME = '90day-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   './js/components/progress-bar.js',
   './js/components/exercise-form.js',
   './js/components/milestone-badge.js',
+  './js/components/shame-modal.js',
   './js/components/lion-svg.js',
   './js/components/toast.js',
   './js/components/charts.js',
@@ -26,6 +27,7 @@ const ASSETS = [
   './js/utils/backup.js',
   './js/utils/html.js',
   './js/utils/achievements.js',
+  './js/utils/shame.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-192.png',
