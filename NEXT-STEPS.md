@@ -234,17 +234,35 @@ You need at least one workout in IndexedDB with a `createdAt` timestamp that's 1
 1. Open the app at `http://localhost:8080`
 2. Log any workout (quick log is fine — type "Test" and save)
 3. Open Chrome DevTools: press **F12**
-4. Click the **Application** tab
-5. In the left sidebar, expand **IndexedDB** → **strength-challenge-db** → click **workouts**
-6. Click on the workout record you just created — it appears in the preview pane on the right
-7. Find the `createdAt` field. It looks like: `"2026-02-23T14:30:00.000Z"`
-8. Double-click the value to edit it
-9. Change the timestamp to something 16 hours in the past. For example, if it's currently 3:00 PM, change it to yesterday at 11:00 PM:
-   - Change the date portion to yesterday
-   - Keep the same ISO format: `"2026-02-22T23:00:00.000Z"`
-10. Press **Enter** to save the edit
+4. Click the **Console** tab
+5. Paste the following snippet and press **Enter**:
 
-> **Why this works:** The shame logic reads `createdAt` from the most recent workout to calculate hours elapsed. Manually editing this value in DevTools lets you simulate any time gap without actually waiting 14 hours.
+```javascript
+(() => {
+  const req = indexedDB.open('strength-challenge-db', 2);
+  req.onsuccess = (e) => {
+    const db = e.target.result;
+    const tx = db.transaction('workouts', 'readwrite');
+    const store = tx.objectStore('workouts');
+    store.getAll().onsuccess = (ev) => {
+      const all = ev.target.result;
+      if (!all.length) { console.log('No workouts found.'); return; }
+      const latest = all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      const hoursAgo = new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString();
+      latest.createdAt = hoursAgo;
+      store.put(latest).onsuccess = () => {
+        console.log(`✅ Done. createdAt set to: ${hoursAgo}`);
+      };
+    };
+  };
+})();
+```
+
+6. You should see `✅ Done. createdAt set to: ...` in the console
+
+> **Why the console instead of the Application tab:** Chrome DevTools shows IndexedDB values as editable but the edits silently revert — it's a known browser limitation. The console snippet writes directly to the database using the same IndexedDB API the app uses, so the change sticks.
+
+> **To test different tiers**, change the `16` in `- 16 * 60 * 60 * 1000` to any number of hours before running the snippet.
 
 ---
 
@@ -295,16 +313,22 @@ You need at least one workout in IndexedDB with a `createdAt` timestamp that's 1
 
 #### Step 7.6 — Test every shame tier
 
-Edit the `createdAt` timestamp to different values to verify all six tiers. After each edit, **reload the page and open a new Incognito window** (or clear sessionStorage manually in DevTools → Application → Session Storage → Clear All) so the suppression doesn't block the modal.
+Run the console snippet from Step 7.1 with different hour values to verify all six tiers. After each run, clear sessionStorage so the suppression doesn't block the modal — paste this into the console first:
 
-| Hours to simulate | Headline you should see |
+```javascript
+sessionStorage.clear(); console.log('Session cleared — reload to see shame modal again.');
+```
+
+Then re-run the timestamp snippet with the hour value for the tier you want to test, and reload.
+
+| Hours to use in snippet | Headline you should see |
 |---|---|
-| 15 hours | **The Streak Is Getting Nervous** |
-| 20 hours | **Almost a Full Day. Really.** |
-| 28 hours | **A Whole Day Gone** |
-| 40 hours | **Day and a Half. Outstanding.** |
-| 52 hours | **Two Days. The Gains Are Gone.** |
-| 80 hours | **You Have Forgotten What Lifting Is** |
+| `15` | **The Streak Is Getting Nervous** |
+| `20` | **Almost a Full Day. Really.** |
+| `28` | **A Whole Day Gone** |
+| `40` | **Day and a Half. Outstanding.** |
+| `52` | **Two Days. The Gains Are Gone.** |
+| `80` | **You Have Forgotten What Lifting Is** |
 
 For each tier, check that:
 - The hours number in red matches what you expect
@@ -328,11 +352,28 @@ This confirms the threshold check works correctly and won't annoy you when you'r
 This test simulates being in the app when the 14-hour mark is about to pass.
 
 1. Log a fresh workout (createdAt = now)
-2. Open DevTools → **Application** → **IndexedDB** → **workouts**
-3. Edit `createdAt` to be 13 hours and 58 minutes ago (e.g., if it's 3:00 PM, set it to yesterday 1:02 AM)
-4. Reload the page — the shame modal should **not** appear (only 13h 58m elapsed, under threshold)
-5. Leave the tab open and wait ~2 minutes
-6. A red toast notification should appear at the bottom of the screen reading: *"14 hours. No workout. The streak is waiting on you."*
+2. Open DevTools → **Console** tab and paste this to set the timestamp to 13 hours 58 minutes ago:
+
+```javascript
+(() => {
+  const req = indexedDB.open('strength-challenge-db', 2);
+  req.onsuccess = (e) => {
+    const db = e.target.result;
+    const tx = db.transaction('workouts', 'readwrite');
+    const store = tx.objectStore('workouts');
+    store.getAll().onsuccess = (ev) => {
+      const all = ev.target.result;
+      const latest = all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      latest.createdAt = new Date(Date.now() - ((13 * 60 + 58) * 60 * 1000)).toISOString();
+      store.put(latest).onsuccess = () => console.log('✅ Set to 13h 58m ago');
+    };
+  };
+})();
+```
+
+3. Reload the page — the shame modal should **not** appear (only 13h 58m elapsed, under threshold)
+4. Leave the tab open and wait ~2 minutes
+5. A red toast notification should appear at the bottom of the screen reading: *"14 hours. No workout. The streak is waiting on you."*
 
 > **What this proves:** If you leave the app open and hit the 14-hour mark mid-session, the in-page nudge fires without requiring a reload. It uses `setTimeout` calculated at page load time.
 
@@ -343,7 +384,7 @@ This test simulates being in the app when the 14-hour mark is about to pass.
 The shame modal and milestone celebrations both use the `#celebration-overlay` element. They must not conflict.
 
 1. Set your workout count close to a milestone (e.g. you need 7 total for the first milestone)
-2. Edit your most recent workout's `createdAt` to be 16 hours ago so shame will trigger
+2. Run the console snippet from Step 7.1 (with `16` hours) so shame will trigger
 3. Reload the page — the shame modal should appear first
 4. Dismiss it
 5. If you were at a milestone, the gold celebration overlay should appear after
