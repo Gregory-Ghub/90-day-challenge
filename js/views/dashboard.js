@@ -2,6 +2,7 @@ import { getChallenge, getWorkoutCount, getRandomMessage, getWorkoutByDate } fro
 import { renderProgressBar } from '../components/progress-bar.js';
 import { todayStr, currentDay } from '../utils/dates.js';
 import { checkAndShowMilestone } from '../components/milestone-badge.js';
+import { checkAndShowShame } from '../components/shame-modal.js';
 import { LION_SVG, LION_SVG_SMALL } from '../components/lion-svg.js';
 import { escapeHtml } from '../utils/html.js';
 import { ACHIEVEMENTS } from '../utils/achievements.js';
@@ -149,5 +150,6 @@ export async function renderDashboard(container) {
     window.location.hash = '#/milestones';
   });
 
+  await checkAndShowShame();
   await checkAndShowMilestone(count);
 }
