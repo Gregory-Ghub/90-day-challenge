@@ -1,7 +1,7 @@
 import { getChallenge, startChallenge, saveWorkout, getWorkoutByDay, getWorkoutByDate, getTemplates } from '../db.js';
 import { initExerciseForm, getExerciseData } from '../components/exercise-form.js';
 import { showToast } from '../components/toast.js';
-import { todayStr, currentDay, displayDate, dateForDay, dayNumber } from '../utils/dates.js';
+import { todayStr, currentDay, displayDate, dateForDay } from '../utils/dates.js';
 import { escapeHtml } from '../utils/html.js';
 import { checkAchievements } from '../utils/achievements.js';
 import { showAchievementCelebration } from '../components/milestone-badge.js';
@@ -31,8 +31,16 @@ export async function renderLogWorkout(container, editDay = null) {
 
   let displayDayNum = Math.min(Math.max(day, 1), 90);
 
-  // Date picker constraints: challenge start to today
-  const minDate = challengeActive ? challenge.startDate : todayStr();
+  // Date picker constraints: up to 90 days before challenge start, through today
+  let minDate = todayStr();
+  if (challengeActive) {
+    const start = new Date(challenge.startDate + 'T00:00:00');
+    start.setDate(start.getDate() - 90);
+    const y = start.getFullYear();
+    const m = String(start.getMonth() + 1).padStart(2, '0');
+    const d = String(start.getDate()).padStart(2, '0');
+    minDate = `${y}-${m}-${d}`;
+  }
   const maxDate = todayStr();
 
   container.innerHTML = `
@@ -89,12 +97,14 @@ export async function renderLogWorkout(container, editDay = null) {
   // Wire up date picker to recalculate day number
   const datePicker = container.querySelector('#workout-date');
   if (datePicker) {
+    datePicker.addEventListener('click', () => {
+      if (datePicker.showPicker) datePicker.showPicker();
+    });
     datePicker.addEventListener('change', async () => {
       const newDate = datePicker.value;
       if (!newDate) return;
 
       dateStr = newDate;
-      displayDayNum = Math.min(Math.max(dayNumber(challenge.startDate, newDate), 1), 90);
 
       // Check if a workout already exists for the selected date
       const existingWorkout = await getWorkoutByDate(newDate);
@@ -102,7 +112,7 @@ export async function renderLogWorkout(container, editDay = null) {
 
       // Update heading and date display
       container.querySelector('#log-heading').textContent =
-        `${isEditing ? 'Edit' : 'Log'} — Day ${displayDayNum}`;
+        `${isEditing ? 'Edit' : 'Log'} Workout`;
       container.querySelector('#log-date-display').textContent = displayDate(newDate);
       container.querySelector('#save-btn').textContent =
         isEditing ? 'Update Workout' : 'Save Workout';
@@ -163,11 +173,11 @@ export async function renderLogWorkout(container, editDay = null) {
     }
 
     if (!challenge.isActive || !challenge.startDate) {
-      await startChallenge(todayStr());
+      await startChallenge(dateStr);
     }
 
     await saveWorkout({
-      dayNumber: displayDayNum,
+      dayNumber: 0,
       date: dateStr,
       quickLog: quickLog || null,
       exercises,

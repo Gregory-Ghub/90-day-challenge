@@ -1,4 +1,4 @@
-const CACHE_NAME = '90day-v8';
+const CACHE_NAME = '90day-v14';
 const ASSETS = [
   './',
   './index.html',

@@ -7,44 +7,6 @@ import { LION_SVG, LION_SVG_SMALL } from '../components/lion-svg.js';
 import { escapeHtml } from '../utils/html.js';
 import { ACHIEVEMENTS } from '../utils/achievements.js';
 
-const THEMES = [
-  { id: 'gold', label: 'Gold', color: '#c8860a' },
-  { id: 'ocean', label: 'Ocean', color: '#0077b6' },
-  { id: 'forest', label: 'Forest', color: '#15803d' },
-  { id: 'sunset', label: 'Sunset', color: '#dc4a20' },
-  { id: 'midnight', label: 'Midnight', color: '#7c3aed' },
-];
-
-function getSelectedTheme() {
-  return localStorage.getItem('selected-theme') || 'gold';
-}
-
-function applyTheme(themeId) {
-  if (themeId === 'gold') {
-    document.documentElement.removeAttribute('data-theme');
-  } else {
-    document.documentElement.setAttribute('data-theme', themeId);
-  }
-  localStorage.setItem('selected-theme', themeId);
-}
-
-function renderThemePicker() {
-  const current = getSelectedTheme();
-  return `
-    <div class="theme-picker">
-      <span class="theme-picker-label">Theme</span>
-      ${THEMES.map(t => `
-        <button class="theme-swatch${t.id === current ? ' active' : ''}"
-                data-theme-id="${t.id}"
-                title="${t.label}"
-                aria-label="${t.label} theme"
-                style="background:${t.color};">
-        </button>
-      `).join('')}
-    </div>
-  `;
-}
-
 const MILESTONES = [
   { day: 7,  emoji: '⭐', label: 'First Week' },
   { day: 14, emoji: '🔥', label: 'Two Weeks' },
@@ -69,18 +31,9 @@ export async function renderDashboard(container) {
         <p class="welcome-text">Build strength, build discipline. Log your first workout to start the clock.</p>
         <button class="btn btn-primary" id="start-btn">Begin the Hunt</button>
       </div>
-      ${renderThemePicker()}
     `;
     container.querySelector('#start-btn').addEventListener('click', () => {
       window.location.hash = '#/log';
-    });
-    container.querySelectorAll('.theme-swatch').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const themeId = btn.dataset.themeId;
-        applyTheme(themeId);
-        container.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
-        btn.classList.add('active');
-      });
     });
     return;
   }
@@ -183,7 +136,6 @@ export async function renderDashboard(container) {
     ${messageHtml}
     ${achievementsHtml}
     ${milestoneBadgesHtml}
-    ${renderThemePicker()}
   `;
 
   container.querySelector('#log-today-banner')?.addEventListener('click', () => {
@@ -196,16 +148,6 @@ export async function renderDashboard(container) {
 
   container.querySelector('#achievements-link')?.addEventListener('click', () => {
     window.location.hash = '#/milestones';
-  });
-
-  // Theme picker
-  container.querySelectorAll('.theme-swatch').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const themeId = btn.dataset.themeId;
-      applyTheme(themeId);
-      container.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
-      btn.classList.add('active');
-    });
   });
 
   await checkAndShowShame();

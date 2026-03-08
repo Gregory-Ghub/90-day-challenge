@@ -167,7 +167,7 @@ export async function saveWorkout(workout) {
     });
   }
 
-  await saveAutoBackup(exportAllData);
+  await renumberWorkouts();
   return result;
 }
 
@@ -181,7 +181,21 @@ export async function getWorkoutByDay(dayNumber) {
 
 export async function getAllWorkouts() {
   const all = await getAll('workouts');
-  return all.sort((a, b) => b.dayNumber - a.dayNumber);
+  return all.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function renumberWorkouts() {
+  const all = await getAll('workouts');
+  all.sort((a, b) => a.date.localeCompare(b.date));
+  for (let i = 0; i < all.length; i++) {
+    const newDay = i + 1;
+    if (all[i].dayNumber !== newDay) {
+      all[i].dayNumber = newDay;
+      all[i].updatedAt = new Date().toISOString();
+      await put('workouts', all[i]);
+    }
+  }
+  await saveAutoBackup(exportAllData);
 }
 
 export async function getWorkoutCount() {

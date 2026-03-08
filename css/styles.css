@@ -215,43 +215,22 @@
   }
 }
 
-/* ========== Theme Picker ========== */
-.theme-picker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 0;
-}
-
-.theme-picker-label {
+/* ========== Theme Dropdown (Header) ========== */
+#theme-select {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.theme-swatch {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
   cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
-  position: relative;
-  padding: 0;
-  background: none;
+  color-scheme: light dark;
   outline: none;
 }
 
-.theme-swatch:hover {
-  transform: scale(1.15);
-}
-
-.theme-swatch.active {
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--text-primary);
+#theme-select:focus {
+  border-color: var(--accent);
 }
 
 /* ========== Reset & Base ========== */
