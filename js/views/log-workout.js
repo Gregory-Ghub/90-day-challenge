@@ -1,7 +1,7 @@
 import { getChallenge, startChallenge, saveWorkout, getWorkoutByDay, getWorkoutByDate, getTemplates } from '../db.js';
 import { initExerciseForm, getExerciseData } from '../components/exercise-form.js';
 import { showToast } from '../components/toast.js';
-import { todayStr, currentDay, displayDate, dateForDay } from '../utils/dates.js';
+import { todayStr, currentDay, displayDate, dateForDay, dayNumber } from '../utils/dates.js';
 import { escapeHtml } from '../utils/html.js';
 import { checkAchievements } from '../utils/achievements.js';
 import { showAchievementCelebration } from '../components/milestone-badge.js';
@@ -12,13 +12,14 @@ export async function renderLogWorkout(container, editDay = null) {
   let day = null;
   let dateStr = todayStr();
   let isEditing = false;
+  const challengeActive = challenge.isActive && challenge.startDate;
 
-  if (editDay && challenge.isActive && challenge.startDate) {
+  if (editDay && challengeActive) {
     workout = await getWorkoutByDay(editDay);
     day = editDay;
     dateStr = workout ? workout.date : dateForDay(challenge.startDate, editDay);
     isEditing = !!workout;
-  } else if (challenge.isActive && challenge.startDate) {
+  } else if (challengeActive) {
     day = currentDay(challenge.startDate);
     dateStr = todayStr();
     workout = await getWorkoutByDate(dateStr);
@@ -28,13 +29,24 @@ export async function renderLogWorkout(container, editDay = null) {
     dateStr = todayStr();
   }
 
-  const displayDayNum = Math.min(Math.max(day, 1), 90);
+  let displayDayNum = Math.min(Math.max(day, 1), 90);
+
+  // Date picker constraints: challenge start to today
+  const minDate = challengeActive ? challenge.startDate : todayStr();
+  const maxDate = todayStr();
 
   container.innerHTML = `
-    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:4px;">
+    <h2 id="log-heading" style="font-size:1.25rem;font-weight:700;margin-bottom:4px;">
       ${isEditing ? 'Edit' : 'Log'} — Day ${displayDayNum}
     </h2>
-    <p style="font-size:0.8125rem;color:var(--text-muted);margin-bottom:16px;">${displayDate(dateStr)}</p>
+    <p id="log-date-display" style="font-size:0.8125rem;color:var(--text-muted);margin-bottom:16px;">${displayDate(dateStr)}</p>
+
+    ${challengeActive ? `
+    <div class="form-group date-picker-group">
+      <label class="form-label" for="workout-date">Workout date <span style="font-weight:400;color:var(--text-muted)">(backdate if you forgot to log)</span></label>
+      <input type="date" class="form-input" id="workout-date" value="${dateStr}" min="${minDate}" max="${maxDate}">
+    </div>
+    ` : ''}
 
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="quick">Quick Log</button>
@@ -73,6 +85,45 @@ export async function renderLogWorkout(container, editDay = null) {
   }
 
   tabBtns.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+  // Wire up date picker to recalculate day number
+  const datePicker = container.querySelector('#workout-date');
+  if (datePicker) {
+    datePicker.addEventListener('change', async () => {
+      const newDate = datePicker.value;
+      if (!newDate) return;
+
+      dateStr = newDate;
+      displayDayNum = Math.min(Math.max(dayNumber(challenge.startDate, newDate), 1), 90);
+
+      // Check if a workout already exists for the selected date
+      const existingWorkout = await getWorkoutByDate(newDate);
+      isEditing = !!existingWorkout;
+
+      // Update heading and date display
+      container.querySelector('#log-heading').textContent =
+        `${isEditing ? 'Edit' : 'Log'} — Day ${displayDayNum}`;
+      container.querySelector('#log-date-display').textContent = displayDate(newDate);
+      container.querySelector('#save-btn').textContent =
+        isEditing ? 'Update Workout' : 'Save Workout';
+
+      // If there's an existing workout for this date, populate the form
+      if (existingWorkout) {
+        container.querySelector('#quick-log').value = existingWorkout.quickLog || '';
+        container.querySelector('#inspiring-msg').value = existingWorkout.inspiringMessage || '';
+        if (existingWorkout.exercises?.length) {
+          switchTab('structured');
+          await initExerciseForm(
+            container.querySelector('#exercise-entries'),
+            existingWorkout.exercises
+          );
+        }
+        workout = existingWorkout;
+      } else {
+        workout = null;
+      }
+    });
+  }
 
   // Init exercise form
   await initExerciseForm(

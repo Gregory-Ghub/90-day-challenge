@@ -301,6 +301,16 @@ body {
   min-height: 100px;
 }
 
+/* ========== Date Picker ========== */
+.date-picker-group {
+  margin-bottom: 16px;
+}
+
+.date-picker-group .form-input[type="date"] {
+  cursor: pointer;
+  color-scheme: light dark;
+}
+
 /* ========== Tabs ========== */
 .tab-bar {
   display: flex;
